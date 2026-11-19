@@ -90,7 +90,7 @@ class _PlayerHalf extends StatelessWidget {
               )
             : Center(
                 child: Text('🪙 ${c.names[c.tossWinner]} won the toss…',
-                    style: const TextStyle(fontSize: 18, color: Colors.white70))),
+                    style: const TextStyle(fontSize: 18, color: Colors.white70)));
         break;
       case LocalPhase.prep:
         body = const Center(child: Text('Get ready…', style: TextStyle(fontSize: 24)));
