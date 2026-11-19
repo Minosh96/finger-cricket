@@ -1,0 +1,27 @@
+name: finger_cricket
+description: "Finger Cricket – 2-player online hand cricket."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+# "any" lets `flutter pub get` pick the newest versions that work with the
+# Flutter SDK used by the GitHub build. After a successful build you can pin
+# them by committing pubspec.lock.
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: any
+  firebase_core: any
+  firebase_auth: any
+  firebase_database: any
+  cloud_functions: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true

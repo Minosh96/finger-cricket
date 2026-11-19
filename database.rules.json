@@ -1,0 +1,37 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$code": {
+        ".read": "auth != null && data.child('players').child(auth.uid).exists()",
+        "players": {
+          "$uid": {
+            "connected": {
+              ".write": "auth != null && auth.uid === $uid",
+              ".validate": "newData.isBoolean() && newData.parent().child('name').exists()"
+            }
+          }
+        },
+        "locks": {
+          "$roundKey": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($code).child('status').val() === 'playing' && root.child('rooms').child($code).child('match/roundKey').val() === $roundKey && (root.child('rooms').child($code).child('match/batterUid').val() === auth.uid || root.child('rooms').child($code).child('match/bowlerUid').val() === auth.uid) && now <= root.child('rooms').child($code).child('match/deadlineAt').val() + 400",
+              ".validate": "newData.val() === true"
+            }
+          }
+        }
+      }
+    },
+    "moves": {
+      "$code": {
+        "$roundKey": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($code).child('status').val() === 'playing' && root.child('rooms').child($code).child('match/roundKey').val() === $roundKey && (root.child('rooms').child($code).child('match/batterUid').val() === auth.uid || root.child('rooms').child($code).child('match/bowlerUid').val() === auth.uid) && now <= root.child('rooms').child($code).child('match/deadlineAt').val() + 400",
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 7 && newData.val() % 1 === 0"
+          }
+        }
+      }
+    }
+  }
+}
