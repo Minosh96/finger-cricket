@@ -117,6 +117,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: const SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: 12, top: 4),
+          child: Text(
+            'Developed by Melow',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Colors.white54),
+          ),
+        ),
+      ),
     );
   }
 }
