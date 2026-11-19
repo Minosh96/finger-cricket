@@ -60,7 +60,18 @@ class OnlineService {
     }
     final auth = FirebaseAuth.instance;
     var user = auth.currentUser;
-    user ??= (await auth.signInAnonymously()).user;
+    if (user == null) {
+      try {
+        user = (await auth.signInAnonymously()).user;
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'operation-not-allowed') {
+          throw OnlineException(
+            'Anonymous sign-in is disabled. Enable it in Firebase Console → Authentication → Sign-in method.',
+          );
+        }
+        throw OnlineException('Firebase Auth error (${e.code}): ${e.message ?? e.toString()}');
+      }
+    }
     if (user == null) {
       throw OnlineException('Could not sign in. Check your internet connection.');
     }

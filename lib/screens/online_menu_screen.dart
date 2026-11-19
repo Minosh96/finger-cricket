@@ -37,7 +37,26 @@ class _OnlineMenuScreenState extends State<OnlineMenuScreen> {
       if (code == null || !mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => OnlineGameScreen(code: code)));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        final msg = e.toString();
+        showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Could not connect'),
+            content: SelectableText(msg),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: msg));
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Copy'),
+              ),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+            ],
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
