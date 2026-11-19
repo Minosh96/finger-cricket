@@ -25,3 +25,4 @@ functions/lib/
 .firebase/
 firebase-debug.log
 database-debug.log
+google-services.json

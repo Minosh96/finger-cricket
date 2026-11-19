@@ -16,7 +16,6 @@ dependencies:
   firebase_core: any
   firebase_auth: any
   firebase_database: any
-  cloud_functions: any
 
 dev_dependencies:
   flutter_test:

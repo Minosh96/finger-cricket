@@ -1,5 +1,6 @@
 // Rules tests – run with `flutter test` (also run by the GitHub build).
 import 'package:finger_cricket/game/game_rules.dart';
+import 'package:finger_cricket/game/online_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 InningsScore play(List<List<int?>> balls) {
@@ -70,5 +71,112 @@ void main() {
           firstBatter: 'Ann', secondBatter: 'Ben', first: first, second: second, maxBalls: 12, maxWickets: 1),
       'Ben won by 1 wicket with 10 balls remaining',
     );
+  });
+
+  test('online engine: full match, serialization, idempotency, and rematch', () {
+    const t0 = 1700000000000;
+    final room = createNewRoom(code: '123456', hostUid: 'u1', hostName: 'Ann', now: t0);
+    room.players['u2'] = OnlinePlayer(name: 'Ben', ready: true, connected: true, joinedAt: t0 + 10);
+    room.players['u1']!.ready = true;
+    room.status = 'lobby';
+
+    // Round-trip through RTDB map format.
+    final hydrated = OnlineRoom.fromRaw(room.toDb());
+    expect(hydrated.code, '123456');
+    expect(hydrated.players.length, 2);
+
+    doToss(hydrated, () => 0.1); // u1 wins toss
+    expect(hydrated.status, 'toss');
+    expect(hydrated.tossWinnerUid, 'u1');
+
+    chooseBatBowl(hydrated, 'u1', 'bat', t0 + 100);
+    expect(hydrated.status, 'playing');
+    final r1 = hydrated.match!.roundKey;
+    expect(r1.startsWith('r${t0}_'), true);
+
+    // Pending before deadline + settle when only one move is present.
+    expect(
+      resolveRound(hydrated, r1, <String, Object?>{'u1': 2}, hydrated.match!.deadlineAt),
+      ResolveOutcome.pending,
+    );
+
+    // 2, 4, NB, 1, W => 8/1 in 0.4 overs -> innings_break
+    expect(
+      resolveRound(hydrated, hydrated.match!.roundKey, <String, Object?>{'u1': 2, 'u2': 5}, t0 + 2000),
+      ResolveOutcome.resolved,
+    );
+    // Duplicate call on old roundKey is stale (idempotent).
+    expect(
+      resolveRound(hydrated, r1, <String, Object?>{'u1': 2, 'u2': 5}, t0 + 2000),
+      ResolveOutcome.stale,
+    );
+    expect(
+      resolveRound(hydrated, hydrated.match!.roundKey, <String, Object?>{'u1': 4, 'u2': 1}, t0 + 5000),
+      ResolveOutcome.resolved,
+    );
+    expect(
+      resolveRound(
+        hydrated,
+        hydrated.match!.roundKey,
+        <String, Object?>{'u1': 3},
+        hydrated.match!.deadlineAt + kSettleMs + 1,
+      ),
+      ResolveOutcome.resolved,
+    );
+    expect(
+      resolveRound(hydrated, hydrated.match!.roundKey, <String, Object?>{'u1': 1, 'u2': 6}, t0 + 12000),
+      ResolveOutcome.resolved,
+    );
+    expect(
+      resolveRound(hydrated, hydrated.match!.roundKey, <String, Object?>{'u1': 5, 'u2': 5}, t0 + 15000),
+      ResolveOutcome.resolved,
+    );
+
+    expect(hydrated.status, 'innings_break');
+    expect(hydrated.match!.score, 8);
+    expect(hydrated.match!.wickets, 1);
+    expect(hydrated.match!.legalBalls, 4);
+    expect(hydrated.match!.noBalls, 1);
+    expect(hydrated.match!.balls, ['2', '4', 'NB', '1', 'W']);
+
+    // Second innings chase: Ben scores 6 + 3 = 9 (target 9).
+    startSecondInnings(hydrated, t0 + 20000);
+    expect(hydrated.status, 'playing');
+    expect(hydrated.match!.batterUid, 'u2');
+    expect(hydrated.match!.target, 9);
+
+    resolveRound(hydrated, hydrated.match!.roundKey, <String, Object?>{'u2': 6, 'u1': 1}, t0 + 23000);
+    resolveRound(hydrated, hydrated.match!.roundKey, <String, Object?>{'u2': 3, 'u1': 2}, t0 + 26000);
+
+    expect(hydrated.status, 'completed');
+    expect(hydrated.result!.winnerUid, 'u2');
+    expect(hydrated.result!.text, 'Ben won by 1 wicket with 10 balls remaining');
+
+    // Rematch resets cleanly.
+    resetForRematch(hydrated, () => 0.9);
+    expect(hydrated.status, 'toss');
+    expect(hydrated.matchNo, 2);
+    expect(hydrated.tossWinnerUid, 'u2');
+  });
+
+  test('online engine: 4 consecutive misses causes forfeit', () {
+    const t0 = 1700000000000;
+    final room = createNewRoom(code: '654321', hostUid: 'u1', hostName: 'Ann', now: t0);
+    room.players['u2'] = OnlinePlayer(name: 'Ben', ready: true, connected: true, joinedAt: t0 + 1);
+    doToss(room, () => 0.1);
+    chooseBatBowl(room, 'u1', 'bat', t0 + 10);
+
+    for (var i = 0; i < kMaxMisses; i++) {
+      final res = resolveRound(
+        room,
+        room.match!.roundKey,
+        <String, Object?>{'u1': 2}, // bowler u2 misses every ball
+        room.match!.deadlineAt + kSettleMs + 1,
+      );
+      expect(res, ResolveOutcome.resolved);
+    }
+    expect(room.status, 'completed');
+    expect(room.result!.winnerUid, 'u1');
+    expect(room.result!.reason, 'forfeit');
   });
 }

@@ -88,7 +88,7 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
     final due = both || svc.serverNow > m.deadlineAt + 1100;
     if (!due) return;
     final now = DateTime.now().millisecondsSinceEpoch;
-    if (_tickRoundKey == m.roundKey && now - _tickSentAt < 2500) return;
+    if (_tickRoundKey == m.roundKey && now - _tickSentAt < 1000) return;
     _tickRoundKey = m.roundKey;
     _tickSentAt = now;
     svc.callQuietly('tick', {'code': code, 'roundKey': m.roundKey});

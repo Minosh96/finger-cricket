@@ -4,30 +4,16 @@
     ".write": false,
     "rooms": {
       "$code": {
-        ".read": "auth != null && data.child('players').child(auth.uid).exists()",
-        "players": {
-          "$uid": {
-            "connected": {
-              ".write": "auth != null && auth.uid === $uid",
-              ".validate": "newData.isBoolean() && newData.parent().child('name').exists()"
-            }
-          }
-        },
-        "locks": {
-          "$roundKey": {
-            "$uid": {
-              ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($code).child('status').val() === 'playing' && root.child('rooms').child($code).child('match/roundKey').val() === $roundKey && (root.child('rooms').child($code).child('match/batterUid').val() === auth.uid || root.child('rooms').child($code).child('match/bowlerUid').val() === auth.uid) && now <= root.child('rooms').child($code).child('match/deadlineAt').val() + 400",
-              ".validate": "newData.val() === true"
-            }
-          }
-        }
+        ".read": "auth != null && (!data.exists() || data.child('players').child(auth.uid).exists() || data.child('status').val() === 'waiting' || (data.child('createdAt').isNumber() && now - data.child('createdAt').val() > 10800000))",
+        ".write": "auth != null && (!data.exists() || data.child('players').child(auth.uid).exists() || (data.child('status').val() === 'waiting' && data.child('createdAt').isNumber() && now - data.child('createdAt').val() <= 3600000) || (data.child('createdAt').isNumber() && now - data.child('createdAt').val() > 10800000))"
       }
     },
     "moves": {
       "$code": {
         "$roundKey": {
+          ".read": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && ((root.child('rooms').child($code).child('match/batterUid').isString() && root.child('rooms').child($code).child('match/bowlerUid').isString() && data.child(root.child('rooms').child($code).child('match/batterUid').val()).exists() && data.child(root.child('rooms').child($code).child('match/bowlerUid').val()).exists()) || (root.child('rooms').child($code).child('match/deadlineAt').isNumber() && now > root.child('rooms').child($code).child('match/deadlineAt').val() + 400))",
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($code).child('status').val() === 'playing' && root.child('rooms').child($code).child('match/roundKey').val() === $roundKey && (root.child('rooms').child($code).child('match/batterUid').val() === auth.uid || root.child('rooms').child($code).child('match/bowlerUid').val() === auth.uid) && now <= root.child('rooms').child($code).child('match/deadlineAt').val() + 400",
+            ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($code).child('status').val() === 'playing' && root.child('rooms').child($code).child('match/roundKey').val() === $roundKey && (root.child('rooms').child($code).child('match/batterUid').val() === auth.uid || root.child('rooms').child($code).child('match/bowlerUid').val() === auth.uid) && root.child('rooms').child($code).child('match/deadlineAt').isNumber() && now <= root.child('rooms').child($code).child('match/deadlineAt').val() + 400",
             ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 7 && newData.val() % 1 === 0"
           }
         }
